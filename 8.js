@@ -16,7 +16,7 @@ for (let i = 0; i < data.length; i++) {
 }
 
 function in_range(pos, width, len) {
-  return pos[0] >= 0 && pos[1] >= 0 && pos[0] < width - 1 && pos[1] < Math.ceil(len / width);
+  return pos[0] >= 0 && pos[1] >= 0 && pos[0] < width - 1 && pos[1] * width + pos[0] < len;
 }
 
 var antinodes = new Set;
@@ -26,11 +26,17 @@ for (let key in positions) {
     for (let j = i + 1; j < list.length; j++) {
       const dx = list[i][0] - list[j][0];
       const dy = list[i][1] - list[j][1];
-      if (in_range([list[j][0] + dx * 2, list[j][1] + dy * 2], width, data.length)) {
-        antinodes.add((list[j][0] + dx * 2).toString().concat(',').concat((list[j][1] + dy * 2).toString()));
+      var new_pos = [list[j][0] + dx, list[j][1] + dy];
+      while (in_range(new_pos, width, data.length)) {
+        antinodes.add(new_pos[0].toString().concat(',').concat(new_pos[1].toString()));
+        new_pos[0] += dx;
+        new_pos[1] += dy;
       }
-      if (in_range([list[i][0] - dx * 2, list[i][1] - dy * 2], width, data.length)) {
-        antinodes.add((list[i][0] - dx * 2).toString().concat(',').concat((list[i][1] - dy * 2).toString()));
+      var new_pos = [list[i][0] - dx, list[i][1] - dy];
+      while (in_range(new_pos, width, data.length)) {
+        antinodes.add(new_pos[0].toString().concat(',').concat(new_pos[1].toString()));
+        new_pos[0] -= dx;
+        new_pos[1] -= dy;
       }
       console.log(list[i], list[j]);
     }
