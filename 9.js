@@ -1,55 +1,53 @@
 const fs = require("node:fs");
 const data = fs.readFileSync("9.txt", "utf8").trim();
 
-var checksum = 0;
-
-if (data.length % 2 != 1) { console.log("not odd??!! oh no...") };
-var end_i = data.length - 1; // I assume an odd number of arguments
-var end_count = Number(data[end_i]);
-var index = 0;
-var out = "";
-for (let i = 0; i < data.length && i < end_i; i++) {
-  const times = Number(data[i]);
-  const ari_sum = times / 2 * (index + index + times - 1);
-  if (i % 2 == 0) {
-    checksum += ari_sum * Math.floor(i / 2);
-    index += times;
-    for (let j = 0; j < times; j++) {
-      out = out.concat(Math.floor(i / 2));
+function parse_data(data) {
+  var files = [];
+  var pos = 0;
+  for (let i = 0; i < data.length; i++) {
+    const c = data[i];
+    if (i % 2 == 0) {
+      files.push({pos:pos,len:Number(c),num:Math.floor(i/2)});
     }
-  } else {
-    var left_to_add = times;
-    while (left_to_add > 0) {
-      if (end_count >= left_to_add) {
-        checksum += (left_to_add / 2 * (index + index + left_to_add - 1)) * Math.floor(end_i / 2);
-        end_count -= left_to_add;
-        index += left_to_add;
-        for (let j = 0; j < left_to_add; j++) {
-          out = out.concat(Math.floor(end_i / 2));
-        }
-        left_to_add = 0;
-      } else {
-        left_to_add -= end_count;
-        checksum += Math.floor(end_i / 2) * (end_count / 2 * (index + index + end_count - 1));
-        for (let j = 0; j < end_count; j++) {
-          out = out.concat(Math.floor(end_i / 2));
-        }
-        index += end_count;
-        end_count = 0;
-      }
-      if (end_count == 0) {
-        end_i -= 2;
-        end_count = Number(data[end_i]);
-        if (end_i < i) {
-          end_count = 0;
-          break;
-        }
-      }
-    }
+    pos += Number(c);
   }
-}
-if (end_count != 0) {
-  checksum += (end_count / 2 * (index + index + end_count - 1)) * Math.floor(end_i/2);
+  return files;
 }
 
-console.log(checksum);
+function compact_files(files) {
+  var i = files.length - 1;
+  outer: while (i > 1) {
+    for (let j = 0; j < i; j++) {
+      if (files[j + 1].pos - (files[j].pos + files[j].len - 1) > files[i].len) {
+        files.splice(j + 1, 0, {pos:files[j].pos + files[j].len,len:files[i].len,num:files[i].num});
+        files.splice(i + 1, 1);
+        continue outer;
+      }
+    }
+    i -= 1;
+  }
+  return files;
+}
+
+var files = parse_data(data);
+draw(files);
+files = compact_files(files);
+draw(files);
+console.log(checksum(files));
+
+function draw(files) {
+  var index = 0;
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    process.stdout.write('.'.repeat(file.pos - index));
+    process.stdout.write(file.num.toString().repeat(file.len));
+    index = file.pos + file.len;
+  };
+  process.stdout.write("\n");
+}
+
+function checksum(files) {
+  return files
+    .map(file => (file.len / 2 * (file.pos + file.pos + file.len - 1)) * file.num)
+    .reduce((partialSum, a) => partialSum + a, 0);
+}
