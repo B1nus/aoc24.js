@@ -23,7 +23,6 @@ var count = 0;
 trailheads.forEach(start => {
   var queue = [start];
   var number = 0;
-  var nines = new Set;
   while (queue.length > 0) {
     var new_new_queue = [];
     for (let i = 0; i < queue.length; i++) {
@@ -31,7 +30,7 @@ trailheads.forEach(start => {
       for (let j = 0; j < new_queue.length; j++) {
         if (data[new_queue[j]] == number + 1) {
           if (number + 1 == 9) {
-            nines.add(new_queue[j]);
+            count += 1;
           }
           new_new_queue.push(new_queue[j]);
         }
@@ -39,8 +38,6 @@ trailheads.forEach(start => {
     }
     number += 1;
     if (number == 9) {
-      console.log(nines.size);
-      count += nines.size
       break;
     }
     queue = new_new_queue;
