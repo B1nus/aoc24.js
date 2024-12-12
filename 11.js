@@ -18,28 +18,37 @@ function blink(stones) {
   return new_stones;
 }
 
-memoization = {};
-
-// Dynamic Programming for the win!
-function stones_in(stones, blinks) {
-  var count = 0;
-  if (blinks > 0) {
-    const key = stones.join(' ');
-    if (key in memoization) {
-      stones = memoization.key.split(' ');
-    } else {
-      stones = blink(stones);
-      memoization.key = stones.join(' ');
-      blinks -= 1;
-      stones.forEach(stone => {
-        count += stones_in([stone], blinks);
-      });
-      return count;
+function count_map(array) {
+  var map = {};
+  array.forEach(item => {
+    if (!(item in map)) {
+      map[item] = 0;
     }
-  } else {
+    map[item] += 1;
+  });
+  return map;
+}
+
+// This algorithm was my dad's idea. Credits go to him.
+//
+// Hint: notice how much repetition of the same numbers there are after running part 1.
+function stone_count(stones, blinks) {
+  const times = Math.min(25, blinks);
+  for (let i = 0; i < times; i++) {
+    stones = blink(stones);
+  }
+  blinks -= times;
+  if (blinks == 0) {
     return stones.length;
+  } else {
+    var map = count_map(stones);
+    var count = 0;
+    for (var key in map) {
+      count += stone_count([key], blinks) * map[key];
+    }
+    return count;
   }
 }
 
-console.log(stones_in(stones, Number(process.argv[2])));
+console.log(stone_count(stones, 75));
 
