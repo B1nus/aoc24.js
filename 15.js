@@ -1,9 +1,29 @@
 const fs = require("node:fs");
 const data = fs.readFileSync("15.txt", "utf8");
-const width = data.indexOf('\n');
+const width = 2 * data.indexOf('\n');
 
 const [map_str, moves_str] = data.split('\n\n');
-const map = map_str.split('').filter(c => c != '\n').map(c => { if (c == 'O') { return 2 } else if (c == '#') { return 1 } else if (c == '@') { return 3 } else { return 0 } });
+const map = expanded_map(map_str);
+
+function expanded_map(map_str) {
+  var map = [];
+  map_str.split('').filter(c => c != '\n').forEach(c => {
+    if (c == 'O') {
+      map.push(2);
+      map.push(3);
+    } else if (c == '#') {
+      map.push(1);
+      map.push(1);
+    } else if (c == '@') {
+      map.push(4);
+      map.push(0);
+    } else {
+      map.push(0);
+      map.push(0);
+    }
+  });
+  return map;
+}
 
 function draw_map(map, width) {
   for (let y = 0; y < map.length / width; y++) {
@@ -12,8 +32,10 @@ function draw_map(map, width) {
       if (val == 1) {
         process.stdout.write('#');
       } else if (val == 2) {
-        process.stdout.write('O');
+        process.stdout.write('[');
       } else if (val == 3) {
+        process.stdout.write(']');
+      } else if (val == 4) {
         process.stdout.write('@');
       } else {
         process.stdout.write('.');
@@ -32,19 +54,43 @@ function move_to_delta(move, width) {
 }
 
 function make_a_move(map, width, move) {
-  const robot_pos = map.indexOf(3);
+  const robot_pos = map.indexOf(4);
   const delta = move_to_delta(move, width);
-  var i = 1
-  while (map[robot_pos + i * delta] == 2) {
-    i += 1;
-  }
-  if (map[robot_pos + i * delta] == 0) {
-    i -= 1;
-    while (map[robot_pos + i * delta] == 2) {
-      map[robot_pos + i * delta + delta] = 2;
-      i -= 1;
+  var i = 1;
+  var boxes_to_push = [robot_pos];
+  var found_new = true;
+  var blocked = false;
+  while (found_new) {
+    var new_boxes = [];
+    found_new = false;
+    boxes_to_push.forEach(box => {
+      if (boxes_to_push.indexOf(box + delta) == -1) {
+        if (map[box + delta] == 2) {
+          new_boxes.push(box + delta);
+          new_boxes.push(box + delta + 1);
+        } else if (map[box + delta] == 3) {
+          new_boxes.push(box + delta);
+          new_boxes.push(box + delta - 1);
+        } else if (map[box + delta] == 1) {
+          blocked = true;
+        }
+      }
+    });
+    if (new_boxes.length > 0) {
+      found_new = true;
+      new_boxes.forEach(new_box => {
+        if (boxes_to_push.indexOf(new_box) == - 1) {
+          boxes_to_push.push(new_box);
+        }
+      });
     }
-    map[robot_pos + delta] = 3;
+  }
+  if (!blocked) {
+    boxes_to_push.reverse().forEach(box => {
+      map[box + delta] = map[box];
+      map[box] = 0;
+    });
+    map[robot_pos + delta] = 4;
     map[robot_pos] = 0;
   }
 }
@@ -74,7 +120,7 @@ function playground(map, width) {
           make_a_move(map, width, 3)
           break;
       }
-      console.log('\x1b[2J\x1b[H');
+      // console.log('\x1b[2J\x1b[H');
       draw_map(map, width);
     }
     if (key[0] == 3) {
