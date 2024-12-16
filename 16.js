@@ -6,7 +6,7 @@ const map = data.split('').filter(c => c != '\n');
 function fun_dijkstras(map, width) {
   const start = map.indexOf('S');
   const end = map.indexOf('E');
-  var agents = [{ pos: start, dir: 3, cost: 0 }];
+  var agents = [{ pos: start, dir: 3, cost: 0, path: new Set }];
   var seen = {};
   process.stdin.setRawMode(true);
   process.stdin.resume();
@@ -17,19 +17,17 @@ function fun_dijkstras(map, width) {
     console.log('\x1b[2J\x1b[H');
 
     const agent = agents.splice(0, 1)[0];
-    console.log(agent);
-    if (agent.pos == end) {
-      console.log(agent.cost);
-    }
+    agent.path.add(agent.pos);
 
     const adjacent = empty_adjacent(map, width, agent.pos);
     adjacent.forEach(adj => {
       const adj_hash = adj.pos.toString().concat(' ').concat(adj.dir.toString());
       if (adj.dir == agent.dir) {
-        push_if_new(agents, seen, { pos: adj.pos, dir: adj.dir, cost: agent.cost + 1 });
+        push_if_new(agents, seen, { pos: adj.pos, dir: adj.dir, cost: agent.cost + 1, path: new Set(agent.path) });
       } else if (is_turnable(agent.dir, adj.dir)) {
-        push_if_new(agents, seen, { pos: adj.pos, dir: adj.dir, cost: agent.cost + 1001 });
+        push_if_new(agents, seen, { pos: adj.pos, dir: adj.dir, cost: agent.cost + 1001, path: new Set(agent.path) });
       }
+      // console.log("last list afterward", agents[agents.length - 1]);
     });
 
     agents.sort((a, b) => a.cost - b.cost);
@@ -38,52 +36,89 @@ function fun_dijkstras(map, width) {
   });
 }
 
-function dijkstras(map, width) {
+function find_best_spots(map, width) {
   const start = map.indexOf('S');
   const end = map.indexOf('E');
-  var agents = [{ pos: start, dir: 3, cost: 0 }];
+  var agents = [{ pos: start, dir: 3, cost: 0, path: new Set([start]) }];
   var seen = {};
+  var min_cost = null;
+  var best_paths_pos = new Set;
   while (agents.length > 0) {
     const agent = agents.splice(0, 1)[0];
     if (agent.pos == end) {
-      return agent.cost;
+      if (min_cost == null) {
+        min_cost = agent.cost;
+        agent.path.forEach(pos => { best_paths_pos.add(pos) });
+      } else if (min_cost == agent.cost) {
+        agent.path.forEach(pos => { best_paths_pos.add(pos) });
+      }
+      continue;
     }
+    if (min_cost != null && agent.cost > min_cost) {
+      continue;
+    }
+    agent.path.add(agent.pos);
 
     const adjacent = empty_adjacent(map, width, agent.pos);
     adjacent.forEach(adj => {
       const adj_hash = adj.pos.toString().concat(' ').concat(adj.dir.toString());
       if (adj.dir == agent.dir) {
-        push_if_new(agents, seen, { pos: adj.pos, dir: adj.dir, cost: agent.cost + 1 });
+        push_if_new(agents, seen, { pos: adj.pos, dir: adj.dir, cost: agent.cost + 1, path: new Set(agent.path) });
       } else if (is_turnable(agent.dir, adj.dir)) {
-        push_if_new(agents, seen, { pos: adj.pos, dir: adj.dir, cost: agent.cost + 1001 });
+        push_if_new(agents, seen, { pos: adj.pos, dir: adj.dir, cost: agent.cost + 1001, path: new Set(agent.path) });
       }
     });
-
     agents.sort((a, b) => a.cost - b.cost);
+
+    // draw_agents(map, width, agents);
   }
+  draw_best_spots(map, width, best_paths_pos);
+  return best_paths_pos.size + 1;
 }
 
 function hash_agent(agent) {
-    return agent.pos.toString().concat(' ').concat(agent.dir.toString());
+  return agent.pos.toString().concat(' ').concat(agent.dir.toString());
 }
 
 function push_if_new(agents, seen, new_agent) {
   const new_agent_hash = hash_agent(new_agent);
-  if (!(new_agent_hash in seen)) {
-    agents.push(new_agent);
-    seen[new_agent_hash] = new_agent.cost;
-  } else if (agents.cost < seen[new_agent_hash].cost) {
-    agents = agents.filter(agent => agent.pos == new_agent.pos && agent.dir == new_agent.dir);
-    agents.push(new_agent);
-    seen[new_agent_hash] = new_agent.cost;
+  // console.log(seen);
+
+  if (new_agent_hash in seen) {
+    if (new_agent.cost > seen[new_agent_hash].cost) {
+      return;
+    }
+    agents.splice(0, agents.length, ...agents.filter(agent => agent.pos != new_agent.pos || agent.dir != new_agent.dir));
+    if (new_agent.cost == seen[new_agent_hash].cost) {
+      seen[new_agent_hash].path.forEach(pos => { new_agent.path.add(pos) });
+    }
+  }
+  agents.push({ ...new_agent, path: new Set(new_agent.path) });
+  seen[new_agent_hash] = { ...new_agent, path: new Set(new_agent.path) };
+}
+
+function draw_best_spots(map, width, best_spots) {
+  for (let y = 0; y < map.length / width; y++) {
+    for (let x = 0; x < width; x++) {
+      const pos = x + y * width;
+      if (best_spots.has(pos)) {
+        process.stdout.write('\x1b[1mO\x1b[0m');
+      } else {
+        process.stdout.write(map[pos]);
+      }
+    }
+    process.stdout.write('\n');
   }
 }
 
 function draw_agents(map, width, agents) {
+  console.log(agents);
   for (let y = 0; y < map.length / width; y++) {
     for (let x = 0; x < width; x++) {
       const pos = x + y * width;
-      if (agents.filter(agent => agent.pos == pos).length > 0) {
+      if (agents.length > 0 && agents[0].path.has(pos)) {
+        process.stdout.write('o');
+      } else if (agents.filter(agent => agent.pos == pos).length > 0) {
         if (agents[0].pos == pos) {
           process.stdout.write('X');
         } else {
@@ -127,4 +162,4 @@ function direction_delta(direction, width) {
 }
 
 // fun_dijkstras(map, width);
-console.log(dijkstras(map, width));
+console.log(find_best_spots(map, width));
