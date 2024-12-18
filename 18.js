@@ -1,8 +1,8 @@
 const fs = require("node:fs");
 const data = fs.readFileSync("18.txt", "utf8");
-const blocks = new Set(data.split('\n').filter(l => l.length > 0).slice(0, 1024).map(l => l.split(',').map(Number)).map(ns => ns[0] + ns[1] * 71));
+const all_blocks = data.split('\n').filter(l => l.length > 0).map(l => l.split(',').map(Number));
 
-function dijkstra(blocks) {
+function has_path(blocks) {
   var seen = new Set();
   var agents = [{pos:0,steps:0}];
 
@@ -10,7 +10,7 @@ function dijkstra(blocks) {
     const agent = agents.splice(0, 1)[0];
 
     if (agent.pos == 70 + 70 * 71) {
-      return agent.steps;
+      return true;
     } else if (seen.has(agent.pos)) {
       continue;
     } else {
@@ -23,7 +23,8 @@ function dijkstra(blocks) {
 
     agents.sort((a, b) => a.steps - b.steps);
   }
-  console.log("Error: could not find a path to (70,70)");
+  draw(blocks, seen);
+  return false;
 }
 
 function adjacent(pos) {
@@ -35,11 +36,13 @@ function adjacent(pos) {
   return adjacent;
 }
 
-function draw(blocks) {
+function draw(blocks, seen) {
   for (let y = 0; y < 71; y++) {
     for (let x = 0; x < 71; x++) {
       if (blocks.has(x + y * 71)) {
         process.stdout.write('#');
+      } else if (seen.has(x + y * 71)) {
+        process.stdout.write('O')
       } else {
         process.stdout.write('.');
       }
@@ -48,4 +51,11 @@ function draw(blocks) {
   }
 }
 
-console.log(dijkstra(blocks));
+for (let bytes = 1024; bytes <= all_blocks.length; bytes++) {
+  const blocks = new Set(all_blocks.slice(0,bytes).map(ns => ns[0] + ns[1] * 71));
+  if (!has_path(blocks)) {
+    console.log(all_blocks[bytes - 1][0].toString().concat(',').concat(all_blocks[bytes - 1][1].toString()));
+    break;
+  }
+}
+
