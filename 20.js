@@ -35,7 +35,7 @@ function good_cheats(map, width, dijkstra_map) {
     // draw_map(map, width, Number(key));
     // console.log("at", key, "with time", time);
     cheats(map, width, Number(key)).forEach(cheat => {
-      const final_time = dijkstra_map[cheat] + time + 2;
+      const final_time = dijkstra_map[cheat] + time + distance(Number(key), cheat, width);
       // console.log("\tcheat", cheat, "cheat time", final_time);
       if (normal_time - final_time >= time_to_save) {
         // console.log("\t\t[GOOD!]");
@@ -72,10 +72,23 @@ function adjacent(map, width, pos) {
 
 // Finds all positions two steps away in each direction
 function cheats(map, width, pos) {
-  var cheats = [];
-  if (pos % width > 1 && map[pos - 1] == '#') { cheats.push(pos - 2); }
-  if (pos % width < width - 2 && map[pos + 1] == '#') { cheats.push(pos + 2); }
-  if (pos > 2 * width - 1 && map[pos - width] == '#') { cheats.push(pos - 2 * width); }
-  if (pos < width * width - 2 * width && map[pos + width] == '#') { cheats.push(pos + 2 * width); }
-  return cheats.filter(cheat => map[cheat] == '.' || map[cheat] == 'E');
+  var accumulator = [];
+  for (let i = 0; i < map.length; i++) {
+    const c = map[i];
+    if (distance(i, pos, width) <= 20 && c != '#') {
+      accumulator.push(i);
+    }
+  }
+  return accumulator;
+}
+
+// Manhattan distance or whatever it's called. The jagged one.
+function distance(pos1, pos2, width) {
+    const p1_x = pos1 % width;
+    const p1_y = (pos1 - p1_x) / width;
+
+    const p2_x = pos2 % width;
+    const p2_y = (pos2 - p2_x) / width;
+
+    return Math.abs(p1_x - p2_x) + Math.abs(p1_y - p2_y);
 }
